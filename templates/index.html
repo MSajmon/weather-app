@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Pogoda</title>
+</head>
+<body>
+    <h1>Sprawdź pogodę</h1>
+    <form method="POST">
+        <label for="country">Kraj:</label>
+        <select name="country" id="country">
+            <option value="PL">Polska</option>
+            <option value="US">USA</option>
+            <option value="GB">Wielka Brytania</option>
+            <option value="DE">Niemcy</option>
+        </select><br><br>
+
+        <label for="city">Miasto:</label>
+        <input type="text" name="city" id="city" required><br><br>
+
+        <button type="submit">Pokaż pogodę</button>
+    </form>
+
+    {% if weather %}
+        {% if weather.error %}
+            <p style="color:red;">{{ weather.error }}</p>
+        {% else %}
+            <h2>Pogoda w {{ weather.city }}:</h2>
+            <ul>
+                <li>Temperatura: {{ weather.temp }}°C</li>
+                <li>Opis: {{ weather.desc }}</li>
+                <li>Wilgotność: {{ weather.humidity }}%</li>
+            </ul>
+        {% endif %}
+    {% endif %}
+</body>
+</html>
