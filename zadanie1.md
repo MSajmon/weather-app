@@ -10,7 +10,7 @@ docker build -t msajmon/weather-app .
 
 b) Uruchomienie kontenera:
 ```bash
-docker run -d -p 5000:5000 --name weather-container -e WEATHER_API_KEY=YOUR_API_KEY msajmon/weather-app
+docker run -d -p 5000:5000 --name weather-container -e WEATHER_API_KEY=e3f83988b6f2d5bd947c61c8a2161934 msajmon/weather-app
 ```
 
 c) Podgląd logów:
@@ -27,5 +27,3 @@ docker image inspect msajmon/weather-app --format='{{.Size}}'
 ### Repozytoria
 - GitHub: [https://github.com/msajmon/weather-app]
 - DockerHub: [https://hub.docker.com/r/msajmon/weather-app]
-
-
