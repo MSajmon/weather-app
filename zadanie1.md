@@ -1,4 +1,4 @@
-## 📄 zadanie1.md – Sprawozdanie do Zadania 1  
+## zadanie1.md – Sprawozdanie do Zadania 1  
 Autor: **Szymon Marczak**
 
 ### 3. Polecenia
@@ -27,3 +27,5 @@ docker image inspect msajmon/weather-app --format='{{.Size}}'
 ### Repozytoria
 - GitHub: [https://github.com/msajmon/weather-app]
 - DockerHub: [https://hub.docker.com/r/msajmon/weather-app]
+
+
