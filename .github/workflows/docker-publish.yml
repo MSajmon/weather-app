@@ -15,7 +15,7 @@ jobs:
 
     env:
       IMAGE_NAME: ghcr.io/msajmon/weather-app
-      CACHE_IMAGE: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/zadanko1-cache:latest
+      CACHE_IMAGE: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/zad2-cache:latest
 
     permissions:
       contents: read
@@ -71,10 +71,6 @@ jobs:
         with:
           context: .
           push: true
-          tags: >-
-            ${{ env.IMAGE_NAME }}:latest,
-            ${{ env.IMAGE_NAME }}:${{ github.sha }},
-            ${{ env.IMAGE_NAME }}:${{ github.ref_name }}
           platforms: linux/amd64,linux/arm64
           cache-from: type=registry,ref=${{ env.CACHE_IMAGE }}
           cache-to: type=registry,ref=${{ env.CACHE_IMAGE }},mode=max
