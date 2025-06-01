@@ -1,66 +1,77 @@
-name: Build and Push Multi-Arch Docker Image
+name: Z2 - Build and Push Docker Image
 
 on:
   push:
-    branches: [main]
-
-env:
-  IMAGE_NAME: ghcr.io/${{ github.repository }}
-  CACHE_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/zadanie2-cache
+    branches: [ main ]
+    tags:
+      - 'v*'
+  workflow_dispatch:
 
 jobs:
-  build-and-scan:
-    name: Build, Scan and Push Image
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
+  build-and-push:
+  name: Build, Scan and Push Image
+  runs-on: ubuntu-latest
 
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+permissions:
+  contents: read
+  packages: write
+  id-token: write
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+env:
+  IMAGE_NAME: ghcr.io/nightxpl01/zadanko1-cld
+  CACHE_IMAGE: ${{ format('docker.io/{0}/zadanko1-cache:latest', secrets.DOCKERHUB_USERNAME) }}
 
-    - name: Log in to GHCR
-      uses: docker/login-action@v3
-      with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+steps:
+- name: Checkout repository
+  uses: actions/checkout@v4
 
-    - name: Login to DockerHub (for cache)
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
+- name: Set up Docker Buildx
+  uses: docker/setup-buildx-action@v3
 
-    - name: Build multi-arch image with cache
-      id: build
-      uses: docker/build-push-action@v5
-      with:
-        push: false
-        tags: ${{ env.IMAGE_NAME }}:latest
-        platforms: linux/amd64,linux/arm64
-        cache-from: type=registry,ref=${{ env.CACHE_IMAGE }}:cache
-        cache-to: type=registry,ref=${{ env.CACHE_IMAGE }}:cache,mode=max
-        outputs: type=docker
+- name: Install Docker Scout
+  run: |
+    curl -sSfL https://raw.githubusercontent.com/docker/scout-cli/main/install.sh | sh -s -- -b /usr/local/bin
 
-    - name: Scan image with Trivy
-      uses: aquasecurity/trivy-action@v0.19.0
-      with:
-        image-ref: ${{ env.IMAGE_NAME }}:latest
-        format: table
-        exit-code: 1
-        severity: CRITICAL,HIGH
+- name: Log in to GHCR
+  uses: docker/login-action@v3
+  with:
+    registry: ghcr.io
+    username: ${{ github.actor }}
+    password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Push multi-arch image if scan passed
-      if: success()
-      uses: docker/build-push-action@v5 //
-      with:
-        push: true
-        tags: ${{ env.IMAGE_NAME }}:latest
-        platforms: linux/amd64,linux/arm64
-        cache-from: type=registry,ref=${{ env.CACHE_IMAGE }}:cache
-        cache-to: type=registry,ref=${{ env.CACHE_IMAGE }}:cache,mode=max
+- name: Log in to DH
+  uses: docker/login-action@v3
+  with:
+    username: ${{ secrets.DOCKERHUB_USERNAME }}
+    password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+- name: Build temp image (for Scout)
+  uses: docker/build-push-action@v5
+  with:
+    context: .
+    push: false
+    load: true
+    platforms: linux/amd64 
+    tags: ${{ env.IMAGE_NAME }}:temp
+    cache-from: type=registry,ref=${{ env.CACHE_IMAGE }}
+    cache-to: type=registry,ref=${{ env.CACHE_IMAGE }},mode=max
+
+- name: Docker Scout Scan
+  run: |
+    docker-scout cves ${{ env.IMAGE_NAME }}:temp --format sarif --output cve-results.sarif
+    SEVERITY_COUNT=$(docker-scout cves ${{ env.IMAGE_NAME }}:temp --format json | grep -E '"severity":"(high|critical)"' | wc -l)
+    echo "Found $SEVERITY_COUNT high/critical vulnerabilities"
+    test "$SEVERITY_COUNT" -eq 0
+
+- name: Push to GHCR
+  uses: docker/build-push-action@v5
+  with:
+    context: .
+    push: true
+    tags: |
+     ${{ env.IMAGE_NAME }}:latest
+     ${{ env.IMAGE_NAME }}:${{ github.sha }}
+     ${{ env.IMAGE_NAME }}:${{ github.ref_name }}
+    platforms: linux/amd64,linux/arm64
+    cache-from: type=registry,ref=${{ env.CACHE_IMAGE }}
+    cache-to: type=registry,ref=${{ env.CACHE_IMAGE }},mode=max
