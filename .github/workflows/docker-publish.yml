@@ -6,7 +6,7 @@ on:
 
 env:
   IMAGE_NAME: ghcr.io/${{ github.repository }}
-  CACHE_IMAGE: yourdockerhubuser/zadanie2-cache
+  CACHE_IMAGE: secrets.DOCKERHUB_USERNAME/zadanie2-cache
 
 jobs:
   build-and-scan:
