@@ -11,7 +11,7 @@ Pipeline (`.github/workflows/docker-publish.yml`) automatycznie:
 5. Publikuje obraz do **GitHub Container Registry (GHCR)**, jeśli nie wykryto podatności `CRITICAL` lub `HIGH`
 
 
-## 🔐 Sekrety GitHub (Secrets)
+##  Sekrety GitHub (Secrets)
 W repozytorium utworzyłem następujące **sekrety**:
   `DOCKERHUB_USERNAME`    `DOCKERHUB_TOKEN`
 
