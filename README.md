@@ -63,7 +63,7 @@ Alternatywą mogło być narzędzie Trivy, jednak Scout był prostszy w integrac
 ---
 
 ## Link do pomyślnie wykonanego łańcucha
-(https://github.com/MSajmon/weather-app/actions/runs/15379376090/job/43268136791)
+(https://github.com/MSajmon/weather-app/actions/runs/15379464288/job/43268336827)
 
 ## 📌 Podsumowanie
 
