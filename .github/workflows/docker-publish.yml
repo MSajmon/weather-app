@@ -1,59 +1,55 @@
-name: Build and Publish Docker Image
+name: Build and Push Multi-Arch Docker Image
 
 on:
   push:
     branches:
-      - master
+      - main
+
+env:
+  IMAGE_NAME: ghcr.io/msajmon/weather-app
+  CACHE_REPO: msajmon/weather-app-cache
 
 jobs:
-  build-and-push:
+  docker-build:
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
-
+      id-token: write
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - name: Checkout source code
+        uses: actions/checkout@v4
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-    - name: Log in to DockerHub
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Log in to GHCR
-      uses: docker/login-action@v3
-      with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ secrets.GHCR_PAT }}
+      - name: Login to DockerHub (for cache)
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-    - name: Build and export Docker image (with cache)
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        push: false
-        platforms: linux/amd64,linux/arm64
-        tags: |
-          ghcr.io/${{ github.repository_owner }}/weather-app:latest
-        cache-from: type=registry,ref=docker.io/${{ secrets.DOCKERHUB_USERNAME }}/weather-app-cache:latest
-        cache-to: type=registry,ref=docker.io/${{ secrets.DOCKERHUB_USERNAME }}/weather-app-cache:latest,mode=max
-        outputs: type=docker,dest=image.tar
+      - name: Build and push image (multi-arch + cache)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ env.IMAGE_NAME }}:latest
+          cache-from: type=registry,ref=docker.io/${{ env.CACHE_REPO }}:buildcache
+          cache-to: type=registry,mode=max,ref=docker.io/${{ env.CACHE_REPO }}:buildcache
 
-    - name: Scan image with Trivy
-      uses: aquasecurity/trivy-action@master
-      with:
-        image-ref: image.tar
-        format: 'table'
-        severity: 'HIGH,CRITICAL'
-        exit-code: '1'
-
-    - name: Load and push image to GHCR
-      if: success()
-      run: |
-        docker load -i image.tar
-        docker push ghcr.io/${{ github.repository_owner }}/weather-app:latest
+      - name: Scan image for vulnerabilities (Trivy)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.IMAGE_NAME }}:latest
+          format: table
+          exit-code: 1
+          severity: CRITICAL,HIGH
