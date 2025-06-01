@@ -1,29 +1,70 @@
-#  Zadanie 2 – CI/CD z wykorzystaniem GitHub Actions
-Repozytorium zawiera konfigurację łańcucha CI/CD w usłudze GitHub Actions dla aplikacji pogodowej opracowanej w Zadaniu 1.
+# Zadanie 2 – CI/CD z Dockerem i GitHub Actions
 
+## ⚙️ Opis działania workflow
 
-## Zakres działania pipeline'u
-Pipeline (`.github/workflows/docker-publish.yml`) automatycznie:
-1. Buduje obraz kontenera aplikacji z pliku `Dockerfile`
-2. Wspiera platformy `linux/amd64` i `linux/arm64`
-3. Wykorzystuje mechanizm cache BuildKit (eksporter: `registry`, backend: `registry`, tryb `max`)
-4. Wykonuje skan bezpieczeństwa obrazu przy użyciu narzędzia **Trivy**
-5. Publikuje obraz do **GitHub Container Registry (GHCR)**, jeśli nie wykryto podatności `CRITICAL` lub `HIGH`
+Workflow znajduje się w `.github/workflows/docker-publish.yml`.
 
+Główne kroki:
+1. **Checkout repozytorium**
+2. **Buildx** – umożliwia multi-arch build.
+3. **Docker Scout** – skanowanie obrazu tymczasowego (`temp`) pod kątem CVE.
+4. **Publikacja** – obraz przesyłany do GHCR tylko, jeśli skan nie wykryje krytycznych/zagrażających luk.
 
-##  Sekrety GitHub (Secrets)
-W repozytorium utworzyłem następujące **sekrety**:
-  `DOCKERHUB_USERNAME`    `DOCKERHUB_TOKEN`
+---
 
+## 🧱 Tagowanie obrazów
 
-##  Tagowanie obrazów i danych cache
-### Obrazy Docker:
-- Publiczne obrazy aplikacji są publikowane do GitHub Container Registry (GHCR):
-  - `ghcr.io/msajmon/weather-app:latest`
-### Cache budowania:
-- Cache warstw budowania jest przechowywany w publicznym repozytorium DockerHub:
-  - `docker.io/msajmon/weather-app-cache:buildcache`
+Obrazy są tagowane automatycznie jako:
 
+- `latest` – dla gałęzi `main`,
+- `ghcr.io/msajmon/weather-app:<commit_sha>` – identyfikacja obrazu po commicie,
+- `ghcr.io/msajmon/weather-app:<ref_name>` – np. `v1.0.0` jeśli tag został użyty.
 
-## Testowanie bezpieczeństwa (CVE)
-W łańcuchu CI/CD używany jest **Trivy**, który sprawdza zbudowany obraz pod kątem podatności bezpieczeństwa:
+### Cache image
+
+Obraz cache’ujący tworzony jest w publicznym repozytorium DockerHub:
+
+docker.io/<DOCKERHUB_USERNAME>/zadanko1-cache:latest
+
+Dzięki temu buildy mogą wykorzystywać wcześniej zbudowane warstwy, co przyspiesza proces.
+
+**Uzasadnienie**: Takie tagowanie zapewnia kontrolę wersji, łatwe roll-backi oraz zgodność z dobrymi praktykami CI/CD ([semver.org](https://semver.org)).
+
+---
+
+##  Wymagane sekrety
+
+W repozytorium GitHub muszą być ustawione następujące sekrety:
+
+| Nazwa              | Opis                               |
+|--------------------|------------------------------------|
+| `GHCR_TOKEN`        | Token do logowania w `ghcr.io`     |
+| `DOCKERHUB_USERNAME`| Login do DockerHub                |
+| `DOCKERHUB_TOKEN`   | Token do logowania DockerHub      |
+
+---
+
+## ✅ Test działania
+
+Pipeline został uruchomiony poprzez `push` do `main`. Po pozytywnym skanowaniu CVE obraz został przesłany do `ghcr.io`.
+
+---
+
+##  Skanowanie bezpieczeństwa – Docker Scout
+
+Zastosowano **Docker Scout**, ponieważ:
+
+- dobrze integruje się z Docker CLI i GitHub Actions,
+- nie wymaga dodatkowej konfiguracji ani rejestracji,
+- zapewnia szybkie i czytelne wyniki.
+
+Alternatywą mogło być narzędzie Trivy, jednak Scout był prostszy w integracji z workflow GitHub Actions.
+
+---
+
+## Link do pomyślnie wykonanego łańcucha
+https://github.com/MSajmon/weather-app/actions/runs/15379035874/job/43267425897
+
+## 📌 Podsumowanie
+
+Pipeline został skonfigurowany zgodnie z założeniami zadania 2 i przeszedł testowe uruchomienie z sukcesem
